@@ -485,7 +485,7 @@ class Board():
             case 1:
                 return LevelConfig(9, 7, [])
             case 2:
-                return LevelConfig(17, 13, [8])
+                return LevelConfig(17, 13, [5])
             case 3:
                 return LevelConfig(15, 9, [7])
             case 4:

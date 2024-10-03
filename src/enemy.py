@@ -1,8 +1,9 @@
 from character import Character
 from wall import Wall
-import pacman
 from collections import deque
 from random import random
+from pickup import Pickup
+import pacman as pc
 
 class Enemy(Character):
     inky   = 5
@@ -87,21 +88,11 @@ class Enemy(Character):
 
     # Blinky Movement Functions #
     def inky_movement(self, board, start, pacman) -> None:
-        ''' Inky's movement differentiates between the other three ghost. So we use
-            random() from the random library to determine which movement he will follow,
-            and it will constantly be changing as time goes on. '''
-        choice = self.random_choice()
-        self._inky_and_clyde_movement_turns()
-
-        if choice <= .33:
-            self.blinky_movement(board, start, pacman)
-
-        elif choice <= .75:
+        if self.pacman_seen(board, start, pacman):
+            path = self.determine_path(board, start, pacman.y, pacman.x)
+            self.path_finding_direction(path)
+        else:
             self.clyde_movement(board)
-
-        elif choice <= 1:
-            self.pinky_movement(board, start, pacman)
-
         
     # Pinky Movement Functions #
     def pinky_movement(self, board, start, pacman):
@@ -317,6 +308,25 @@ class Enemy(Character):
                     queue.append(path + [(x2, y2)])
                     seen.add((x2, y2))
 
+    def pacman_seen(self, board, start, pacman):
+        directions = [(0, 1), (1, 0), (-1, 0), (0, -1)]
+        for dir in directions:
+            x, y = start
+            print(x,y)
+            if (x, y) == (pacman.x, pacman.y):
+                return True
+            try:
+                while type(board[y + dir[1]][x + dir[0]]) in [Pickup, None.__class__, pc.Pacman]:
+                    if (y + dir[1], x + dir[0]) == (pacman.y, pacman.x):
+                        return True
+                    print(board[y + dir[1]][x + dir[0]])
+                    x = x + dir[0]
+                    y = y + dir[1]
+            except:
+                pass
+        return False
+                
+        
     def wanted_path_indexes(self, board, gamestate, seen, x, y) -> bool:
         ''' To be a wanted index, x and y have to be within the board boundaries.
             The position of y, x on the board also can not be a wall, since we need
