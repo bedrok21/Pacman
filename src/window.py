@@ -38,7 +38,7 @@ class Window():
         self._pause = False
 
         # Pacman Board Initialized #
-        self.board = Board(self._width, self._height, self._images)
+        self.board = Board(1, self._width, self._height, self._images)
         self.board.new_level()          # Initializes a new level for Pacman
 
     # Drawing Functions #
@@ -63,7 +63,7 @@ class Window():
     def _draw_stats(self) -> None:
         ''' Draws the statistics of Pacman for the player to see. '''
         self._score_label['text'] = self.board.pacman.display_score()
-        self._level_label['text'] = self.board.pacman.display_level()
+        self._level_label['text'] = self.board.display_level()
         self._lives_label['text'] = self.board.pacman.display_lives()
 
     def _adjust_board(self) -> None:
@@ -112,6 +112,8 @@ class Window():
 
     def level_advancement(self) -> None:
         ''' Board loads up a new level once the previous level is completed. '''
+        level = self.board.level + 1 if self.board.level < 4 else 1
+        self.board = Board(level, self._width, self._height, self._images)
         self.board.new_level()
         self._bindings_enabled(True)
 

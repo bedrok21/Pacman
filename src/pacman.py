@@ -100,13 +100,6 @@ class Pacman(Character):
         ''' If next_direction has a direction, it returns True, else False. '''
         return self.next_direction is not None
         
-    def crossed_boundary(self):
-        ''' This function controls '''
-        if self.direction == 'Left':
-            self.change_location(27, 14)
-        else:
-            self.change_location(0, 14)
-
     # Display Functions #
     def display_score(self) -> str:
         return f'Score: {self.score}'

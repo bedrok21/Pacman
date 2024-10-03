@@ -1,14 +1,23 @@
+import random
+from dataclasses import dataclass
 from pacman import Pacman
 from pickup import Pickup
 from enemy import Enemy
 from wall import Wall
-
+from collections import deque
 _DEBUG = False
 
+@dataclass
+class LevelConfig:
+    width: int
+    height: int
+    enemies: int
+    cycle_probability: int = 0.6
+        
 class Board():
     restricted_area = [(13,11), (13,16)]
     
-    def __init__(self, width, height, images):
+    def __init__(self, level, width, height, images):
         self._window_width = width
         self._window_height = height
         self.images = images
@@ -17,7 +26,8 @@ class Board():
         self.pacman = None
         self.enemies = set()
         self.game_objects = set()
-        
+
+        self.level = level
         self.game_over = False
 
     # Level Functions #
@@ -29,7 +39,7 @@ class Board():
         score, lives, level = self.current_stats()
         self.refresh_objects(level)
         
-        self.Gamestate = Board.create_board()
+        self.create_board()
         self.Gamestate = self._pacman_board( self.square_height(), self.square_width() )
         
         self.update_board()
@@ -242,7 +252,7 @@ class Board():
             return type(self[y][x + 1]) != Wall
 
         elif direction == 'Down':
-            return type(self[y + 1][x]) != Wall and (y + 1, x) not in Board.restricted_area
+            return type(self[y + 1][x]) != Wall  # and (y + 1, x) not in Board.restricted_area
 
         elif direction == 'Up':
             return type(self[y - 1][x]) != Wall
@@ -292,12 +302,23 @@ class Board():
         object changes it's x and y with the crossed_boundary method. Otherwise the
         Gamestate is updated regularly.
         '''
-        if self.edge_crossing(y, x):
-            self.pacman.crossed_boundary()              # crossed_boundary changes Pacman's y, so must call pacman.y and pacman.x below
+        h = len(self.Gamestate[0])
+        w = len(self.Gamestate)
+        if x == len(self.Gamestate[0]) - 1 and self.pacman.direction == 'Right':
+            self.pacman.change_location(0, y)
             self[self.pacman.y][self.pacman.x] = self.pacman
-
+        elif x == 0 and self.pacman.direction == 'Left':
+            self.pacman.change_location(self.board_width() - 1, y)
+            self[self.pacman.y][self.pacman.x] = self.pacman
+        elif y == len(self.Gamestate) - 1 and self.pacman.direction == 'Down':
+            self.pacman.change_location(x, 0)
+            self[self.pacman.y][self.pacman.x] = self.pacman
+        elif y == 0 and self.pacman.direction == 'Up':
+            self.pacman.change_location(x, self.board_height() - 1)
+            self[self.pacman.y][self.pacman.x] = self.pacman
         else:
             self.pacman.contact( self[y][x] )
+
 
     def validate_upcoming_movement(self):
         ''' This function handles the case where Pacman has an upcoming direction
@@ -361,11 +382,11 @@ class Board():
         ''' When Pacman is on the 15th row and has a x of 0 or 27,
             then he is at the specific edge of the board that allows
             crossing from one side to another, if so return True. '''
-        return (y == 14 and x == 0) or (y == 14 and x == 27)
+        return (x == self.board_width() or x == 0) or (y == 0 or y == self.board_height())
     
     def square_height(self) -> float:
         ''' Returns the height of each individual square in the level. '''
-        return self._window_height / len(self)
+        return self._window_height / self.board_height()
 
     def square_width(self) -> float:
         '' 'Returns the width of each individual square in the level. '''
@@ -374,6 +395,10 @@ class Board():
     def board_width(self) -> int:
         ''' Returns the width of the board, [0] as an index since all list inside are same length. '''
         return len(self.Gamestate[0])
+
+    def board_height(self) -> int:
+        ''' Returns the width of the board, [0] as an index since all list inside are same length. '''
+        return len(self.Gamestate)
 
     # Overriding Functions #
     def __len__(self) -> int:
@@ -455,44 +480,131 @@ class Board():
 
         return game_board
 
-    @classmethod
+    def get_level_config(self):
+        match self.level:
+            case 1:
+                return LevelConfig(9, 7, [])
+            case 2:
+                return LevelConfig(17, 13, [8])
+            case 3:
+                return LevelConfig(15, 9, [7])
+            case 4:
+                return LevelConfig(17, 13, [7, 8])
+            case 5:
+                return LevelConfig(15, 9, [6, 7, 8])
+
     def create_board(self):
         #Sets up the board with the numbers, that will represent the objects
-        new_board = \
-        [ [0 for i in range(28)],
-          ([0] + [1 for i in range(12)] + [0]) * 2,
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-          [0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0],
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0], # replace 9 with 1
-          [0] + [1 for i in range(26)] + [0],
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-          [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, None, 0, 0, None, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, None, 0, 0, None, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, None, None, None, None, None, None, None, None, None, None, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, None, 0, None, 0, 0, 0, 0, None, 0, None, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, None, 0, None, None, None, None, None, None, 0, None, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [None, None, None, None, None, None, 1, 0, 0, None, 0, None, None, None, None, None, None, 0, None, 0, 0, 1, None, None, None, None, None, None],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, None, 0, None, 5, 6, 7, 8, None, 0, None, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          [None, None, None, None, None, 0, 1, 0, 0, None, 0, 0, 0, 0, 0, 0, 0, 0, None, 0, 0, 1, 0, None, None, None, None],
-          [None, None, None, None, None, 0, 1, 0, 0, None, None, None, None, None, None, None, None, None, None, 0, 0, 1, 0, None, None, None, None, None],
-          [None, None, None, None, None, 0, 1, 0, 0, None, 0, 0, 0, 0, 0, 0, 0, 0, None, 0, 0, 1, 0, None, None, None, None, None],
-          [0, 0, 0, 0, 0, 0, 1, 0, 0, None, 0, 0, 0, 0, 0, 0, 0, 0, None, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-          ([0] + [1 for i in range(12)] + [0]) * 2,
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-          [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-          [0, 3, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, None, 9, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 3, 0, 0],
-          [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-          [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-          [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0],
-          [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-          [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-          [0] + [1 for i in range(26)] + [0],
-          [0 for i in range(28)]]
         
+        config = self.get_level_config()
+        maze = [[0 for _ in range(config.width)] for _ in range(config.height)]
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        pacman = True
+
+        def check_board_transfer(x, y, maze):
+            if x == 0:
+                i = 1
+                while maze[config.height - i][y] == Wall.wall:
+                    maze[config.height - i][y] = 1
+                    i+=1
+            if x == config.height - 1:
+                i = 0
+                while maze[i][y] == Wall.wall:
+                    maze[i][y] = 1
+                    i+=1
+            if y == 0:
+                i = 1
+                while maze[x][config.width - i] == Wall.wall:
+                    maze[x][config.width - i] = 1
+                    i+=1
+            if y == config.width - 1:
+                i = 0
+                while maze[x][i] == Wall.wall:
+                    maze[x][i] = 1
+                    i+=1
+                                
+        def dfs(x, y):
+            nonlocal pacman
+            random.shuffle(directions)
+            for dx, dy in directions:
+                nx, ny = x + dx * 2, y + dy * 2
+
+                if 0 < nx < config.width - 1 and 0 < ny < config.height - 1 and maze[ny][nx] == 0:
+                    if pacman:
+                        maze[ny - dy][nx - dx] = 9  
+                        pacman = False
+                    else:
+                        maze[ny - dy][nx - dx] = 1  
+                        check_board_transfer(ny - dy, nx - dx, maze)
+
+                    maze[ny][nx] = 1
+                    check_board_transfer(ny, nx, maze)
+                    dfs(nx, ny)
+
+        start_x, start_y = random.randrange(1, config.width, 2), random.randrange(1, config.height, 2)
+        maze[start_y][start_x] = 1
+        dfs(start_x, start_y)
+
+        for y in range(1, config.height - 1, 2):
+            for x in range(1, config.width - 1, 2):
+                if random.random() < config.cycle_probability:
+                    random_direction = random.choice(directions)
+                    nx, ny = x + random_direction[0], y + random_direction[1]
+                    if 0 <= nx < config.width and 0 <= ny < config.height and maze[ny][nx] == 0:
+                        maze[ny][nx] = 1
+                        check_board_transfer(ny, nx, maze)
+
+        def find(s):
+            for idx1, line in enumerate(maze):
+                for idx2, i in enumerate(line):
+                    if i == s:
+                        return idx1, idx2
+
+        def find_s(x1,y1,x2,y2):
+            visited = set((x1, y1))
+            def next(x1, y1, x2, y2, s):
+                if (x1, y1) not in visited:
+                    if x2==x1 and y1==y2:
+                        return s
+                    visited.add((x1, y1))
+                    if maze[x1+1][y1] != Wall.wall:
+                        next(x1+1, y1, x2, y2, s + 1)
+                    if maze[x1][y1+1] != Wall.wall:
+                        next(x1, y1+1, x2, y2, s + 1)
+                    if maze[x1-1][y1] != Wall.wall:
+                        next(x1-1, y1, x2, y2, s + 1)
+                    if maze[x1][y1-1] != Wall.wall:
+                        next(x1, y1-1, x2, y2, s + 1)
+            return next(x1,y1,x2,y2,0)
+            
+        def find_furthest(x0, y0):
+            furthest = x0, y0
+            s_f = 0
+            queue = deque([(x0, y0, 0)])
+            visited = set()
+            while queue:
+                x1, y1, s = queue.popleft() 
+                if (x1, y1) not in visited:
+                    if s > s_f and maze[x1][y1] not in [Enemy.inky, Enemy.blinky, Enemy.pinky, Enemy.clyde]:
+                        furthest = (x1, y1)
+                        s_f = s
+                    visited.add((x1, y1))
+                    if x1+1 < config.height and maze[x1+1][y1] != Wall.wall:
+                        queue.append((x1+1, y1, s + 1))
+                    if y1+1 < config.width and maze[x1][y1+1] != Wall.wall:
+                        queue.append((x1, y1+1, s + 1))
+                    if x1 > 0 and maze[x1-1][y1] != Wall.wall:
+                        queue.append((x1-1, y1, s + 1))
+                    if y1 > 0 and maze[x1][y1-1] != Wall.wall:
+                        queue.append((x1, y1-1,  s + 1))
+            return furthest
         
-        return new_board
+        x, y = find(9)
+        for en in config.enemies:
+            ex, ey = find_furthest(x, y)
+            maze[ex][ey] = en
+                
+        self.Gamestate = maze
 
 
     # ===== debug functions =====
@@ -540,3 +652,6 @@ class Board():
             print(enemy.enemy_type, enemy.y, enemy.x, enemy.pickup_memory)
 
             print('-' * 50)
+
+    def display_level(self) -> str:
+        return f'Level: {self.level}'

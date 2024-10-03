@@ -231,16 +231,16 @@ class Enemy(Character):
             returns false. '''
         y, x = self.return_location()
         
-        if self.direction == 'Left':
+        if x > 0 and self.direction == 'Left':
             return type(board[y][x - 1]) != Wall
 
-        elif self.direction == 'Right': 
+        elif x+1 < len(board[0]) and self.direction == 'Right': 
             return type(board[y][x + 1]) != Wall
 
-        elif self.direction == 'Down':
+        elif y+1 < len(board) and self.direction == 'Down':
             return type(board[y + 1][x]) != Wall
 
-        elif self.direction == 'Up':
+        elif y > 0 and self.direction == 'Up':
             return type(board[y - 1][x]) != Wall
 
     def random_choice(self) -> int or float:
