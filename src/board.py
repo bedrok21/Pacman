@@ -483,11 +483,11 @@ class Board():
     def get_level_config(self):
         match self.level:
             case 1:
-                return LevelConfig(9, 7, [])
+                return LevelConfig(17, 13, [5])
             case 2:
                 return LevelConfig(17, 13, [5])
             case 3:
-                return LevelConfig(15, 9, [7])
+                return LevelConfig(15, 9, [8])
             case 4:
                 return LevelConfig(17, 13, [7, 8])
             case 5:
@@ -523,7 +523,7 @@ class Board():
                     maze[x][i] = 1
                     i+=1
                                 
-        def dfs(x, y):
+        def map_builder(x, y):
             nonlocal pacman
             random.shuffle(directions)
             for dx, dy in directions:
@@ -539,11 +539,11 @@ class Board():
 
                     maze[ny][nx] = 1
                     check_board_transfer(ny, nx, maze)
-                    dfs(nx, ny)
+                    map_builder(nx, ny)
 
         start_x, start_y = random.randrange(1, config.width, 2), random.randrange(1, config.height, 2)
         maze[start_y][start_x] = 1
-        dfs(start_x, start_y)
+        map_builder(start_x, start_y)
 
         for y in range(1, config.height - 1, 2):
             for x in range(1, config.width - 1, 2):
@@ -559,23 +559,6 @@ class Board():
                 for idx2, i in enumerate(line):
                     if i == s:
                         return idx1, idx2
-
-        def find_s(x1,y1,x2,y2):
-            visited = set((x1, y1))
-            def next(x1, y1, x2, y2, s):
-                if (x1, y1) not in visited:
-                    if x2==x1 and y1==y2:
-                        return s
-                    visited.add((x1, y1))
-                    if maze[x1+1][y1] != Wall.wall:
-                        next(x1+1, y1, x2, y2, s + 1)
-                    if maze[x1][y1+1] != Wall.wall:
-                        next(x1, y1+1, x2, y2, s + 1)
-                    if maze[x1-1][y1] != Wall.wall:
-                        next(x1-1, y1, x2, y2, s + 1)
-                    if maze[x1][y1-1] != Wall.wall:
-                        next(x1, y1-1, x2, y2, s + 1)
-            return next(x1,y1,x2,y2,0)
             
         def find_furthest(x0, y0):
             furthest = x0, y0

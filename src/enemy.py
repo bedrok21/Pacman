@@ -88,7 +88,9 @@ class Enemy(Character):
 
     # Blinky Movement Functions #
     def inky_movement(self, board, start, pacman) -> None:
+        print('Inky Movement')
         if self.pacman_seen(board, start, pacman):
+            print('Pacman Seen')
             path = self.determine_path(board, start, pacman.y, pacman.x)
             self.path_finding_direction(path)
         else:
@@ -308,22 +310,25 @@ class Enemy(Character):
                     queue.append(path + [(x2, y2)])
                     seen.add((x2, y2))
 
-    def pacman_seen(self, board, start, pacman):
+    def pacman_seen(self, board, start, pacman, mode=0):
         directions = [(0, 1), (1, 0), (-1, 0), (0, -1)]
         for dir in directions:
             x, y = start
-            print(x,y)
             if (x, y) == (pacman.x, pacman.y):
                 return True
             try:
                 while type(board[y + dir[1]][x + dir[0]]) in [Pickup, None.__class__, pc.Pacman]:
+                    print(board[y + dir[1]][x + dir[0]])
                     if (y + dir[1], x + dir[0]) == (pacman.y, pacman.x):
                         return True
-                    print(board[y + dir[1]][x + dir[0]])
+                    for direction in directions:
+                        if type(board[y+direction[1]][x+direction[0]]) in [Pickup, None.__class__, pc.Pacman] and mode<2:
+                            if self.pacman_seen(board, (x+direction[0], y+direction[1]), pacman, mode+1):
+                                return True
                     x = x + dir[0]
                     y = y + dir[1]
-            except:
-                pass
+            except Exception as e:
+                print(e)
         return False
                 
         
